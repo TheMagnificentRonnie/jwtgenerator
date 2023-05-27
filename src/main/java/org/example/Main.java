@@ -1,13 +1,18 @@
 package org.example;
 
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
-import java.util.Map;
-
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Date;
 
 public class Main {
 
@@ -56,7 +61,7 @@ public class Main {
 
     privateKeyStr = formatPrivateKey(privateKeyStr);
 
-    String jwtToken = generateJWT(privateKeyStr, payload, headers);
+    String jwtToken = generateJWT(privateKeyStr, payload);
     System.out.println("JWT Token: " + jwtToken);
   }
 
@@ -71,7 +76,7 @@ public class Main {
     return privateKey;
   }
 
-  private static String generateJWT(String privateKeyStr, String payload, String headers) {
+  public static String generateJWT(String privateKeyStr, String payload) {
     try {
       // Decode the private key from base64
       byte[] privateKeyBytes = Base64.getMimeDecoder().decode(privateKeyStr);
@@ -81,15 +86,26 @@ public class Main {
       KeyFactory kf = KeyFactory.getInstance("RSA");
       PrivateKey privateKey = kf.generatePrivate(spec);
 
-      Map<String, Object> Map = JsonUtils.jsonToMap(headers);
+      // Create the JWT header
+      JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS512)
+        .type(JOSEObjectType.JWT)
+        .build();
 
+      // Create JWT claims
+      JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+        .subject(payload)
+        .expirationTime(new Date(System.currentTimeMillis() + 5 * 60 * 1000)) // 5 minutes from now
+        .build();
 
-      // Generate the JWT token
-      String jwtToken = Jwts.builder()
-        .setHeader(Map)
-        .setPayload(payload)
-        .signWith(privateKey, SignatureAlgorithm.RS512)
-        .compact();
+      // Create the signed JWT
+      SignedJWT signedJWT = new SignedJWT(header, claimsSet);
+
+      // Sign the JWT
+      JWSSigner signer = new RSASSASigner(privateKey);
+      signedJWT.sign(signer);
+
+      // Serialize the signed JWT to a compact string
+      String jwtToken = signedJWT.serialize();
 
       return jwtToken;
     } catch (Exception e) {
