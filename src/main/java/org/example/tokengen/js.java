@@ -30,3 +30,6 @@ const { JWK, JWT } = require('jose');
   };
   }
   };
+
+
+  zip -r lambda-package.zip index.js node_modules/
