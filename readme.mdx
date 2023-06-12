@@ -1,0 +1,52 @@
+# Project Name: SGIA - Scatter Gather Integration Application (Java)
+
+SGIA (Scatter Gather Integration Application) is a Java-based application that utilizes a JSON file configuration to implement scatter gather integration. This application provides a flexible and configurable solution for handling complex integration flows. The JSON file comprises two sections: the request configuration and the response configuration.
+
+## Request Configuration
+
+The request configuration in SGIA consists of blocks of requests that can form a dependency tree. Each block represents a set of requests that need to be executed together. The dependency tree allows for parallel execution of requests wherever possible, optimizing the integration process.
+
+The JSON file used for the request configuration follows a specific structure, defining the requests and their dependencies. Developers can easily modify and extend the configuration to suit their integration requirements.
+
+## Response Configuration
+
+The response configuration in SGIA collates the data from the executed requests and processes it accordingly. It provides a centralized location to define how the response data should be handled, allowing for aggregation, filtering, transformation, and other operations.
+
+## Sample Response JSON File
+
+SGIA utilizes a separate JSON file stored in DynamoDB to describe a sample response for the integration. This file holds the necessary data to simulate and test the integration without the need for actual external systems. Developers can update this file to match the desired response structure for their testing purposes.
+
+## Getting Started
+
+To start using SGIA, follow the steps below:
+
+1. Clone the SGIA repository from [GitHub](https://github.com/yourusername/your-repo).
+2. Set up your Java development environment and ensure you have JDK and Maven installed.
+3. Configure the JSON files:
+   - Update the request configuration JSON file (`request-config.json`) to define the integration flow and request dependencies.
+   - Update the sample response JSON file stored in DynamoDB (`sample-response.json`) to match the desired response structure for testing.
+4. Implement the necessary Java classes and logic to handle the requests and responses based on the defined configuration.
+5. Build the SGIA application using Maven by running `mvn clean install` in the project root directory.
+6. Run the application and monitor the output and logs to ensure the integration is executing as expected.
+7. Make any necessary adjustments to the configuration or code based on your integration requirements.
+
+## Additional Resources
+
+For further information and assistance with using SGIA, please refer to the following resources:
+
+- [Documentation](https://sgia-docs.com): Detailed documentation on how to configure and use SGIA for your scatter gather integrations.
+- [GitHub Repository](https://github.com/yourusername/your-repo): The official GitHub repository for SGIA, where you can find the latest updates, contribute, and report issues.
+
+## Contributing
+
+Contributions to SGIA are welcome! If you find any issues or have suggestions for improvements, please open an issue in the GitHub repository. You can also submit pull requests with bug fixes, new features, or enhancements.
+
+Please ensure that you adhere to the project's code of conduct and follow the contribution guidelines outlined in the repository.
+
+## License
+
+SGIA is released under the [MIT License](https://opensource.org/licenses/MIT). See the [LICENSE](https://github.com/yourusername/your-repo/blob/main/LICENSE) file for more details.
+
+## Acknowledgements
+
+SGIA was inspired by the need for a flexible and configurable scatter gather integration solution. We would like to thank the open-source community for their contributions and support in making SGIA a powerful and reliable tool for integration projects.
