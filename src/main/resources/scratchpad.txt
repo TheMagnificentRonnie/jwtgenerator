@@ -24,3 +24,6 @@
         </plugin>
     </plugins>
 </build>
+
+
+mvn clean generate-sources
