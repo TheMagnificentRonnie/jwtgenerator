@@ -1,29 +1,41 @@
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.openapitools</groupId>
-            <artifactId>openapi-generator-maven-plugin</artifactId>
-            <version>5.4.0</version>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>generate</goal>
-                    </goals>
-                    <configuration>
-                        <inputSpec>path/to/your/openapi-spec.yaml</inputSpec>
-                        <generatorName>java</generatorName>
-                        <configOptions>
-                            <sourceFolder>src/main/java</sourceFolder>
-                            <apiPackage>com.example.api</apiPackage>
-                            <modelPackage>com.example.model</modelPackage>
-                            <inlineSchemaName>true</inlineSchemaName>
-                        </configOptions>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+    <version>2.2.9.RELEASE</version>
+</dependency>
 
 
-mvn clean generate-sources
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+        PersonClient client = context.getBean(PersonClient.class);
+
+        int personId = 1;
+        String authToken = "Bearer your-auth-token";
+        Person person = client.getPerson(personId, authToken);
+
+        System.out.println("Name: " + person.getName());
+        System.out.println("Age: " + person.getAge());
+
+        context.close();
+    }
+}
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+
+@FeignClient(name = "personClient", url = "${rest.base-url}")
+public interface PersonClient {
+    @GetMapping("/api/persons/{id}")
+    Person getPerson(@PathVariable("id") int id, @RequestHeader("Authorization") String authToken);
+}
+
+rest:
+  base-url: http://localhost:8080
