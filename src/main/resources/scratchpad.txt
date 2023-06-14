@@ -1,0 +1,26 @@
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.openapitools</groupId>
+            <artifactId>openapi-generator-maven-plugin</artifactId>
+            <version>5.4.0</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>generate</goal>
+                    </goals>
+                    <configuration>
+                        <inputSpec>path/to/your/openapi-spec.yaml</inputSpec>
+                        <generatorName>java</generatorName>
+                        <configOptions>
+                            <sourceFolder>src/main/java</sourceFolder>
+                            <apiPackage>com.example.api</apiPackage>
+                            <modelPackage>com.example.model</modelPackage>
+                            <inlineSchemaName>true</inlineSchemaName>
+                        </configOptions>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
