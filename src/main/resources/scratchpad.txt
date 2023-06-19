@@ -39,3 +39,6 @@ public interface PersonClient {
 
 rest:
   base-url: http://localhost:8080
+
+     Expression expression = parser.parseExpression("new java.text.SimpleDateFormat('dd-MM-yyyy').format(new java.text.SimpleDateFormat('yyyy-MM-dd').parse('" + inputDate + "'))");
+
