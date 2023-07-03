@@ -1,44 +1,80 @@
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-openfeign</artifactId>
-    <version>2.2.9.RELEASE</version>
-</dependency>
+<dependencies>
+    <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>secretsmanager</artifactId>
+        <version>2.17.35</version>
+    </dependency>
+    <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>regions</artifactId>
+        <version>2.17.35</version>
+    </dependency>
+    <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>auth</artifactId>
+        <version>2.17.35</version>
+    </dependency>
+</dependencies>
 
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import software.amazon.awssdk.services.secretsmanager.model.SecretsManagerException;
 
-@SpringBootApplication
-public class Application {
+import java.time.Instant;
+
+public class SecretsManagerExample {
+
     public static void main(String[] args) {
-        ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
-        PersonClient client = context.getBean(PersonClient.class);
+        // Set up AWS credentials
+        String accessKeyId = "YOUR_ACCESS_KEY_ID";
+        String secretAccessKey = "YOUR_SECRET_ACCESS_KEY";
+        Region region = Region.US_EAST_1; // Replace with your desired region
 
-        int personId = 1;
-        String authToken = "Bearer your-auth-token";
-        Person person = client.getPerson(personId, authToken);
+        // Set up Secrets Manager client
+        SecretsManagerClient secretsManagerClient = SecretsManagerClient.builder()
+                .region(region)
+                .build();
 
-        System.out.println("Name: " + person.getName());
-        System.out.println("Age: " + person.getAge());
+        try {
+            // Retrieve secret "Secret-YIN"
+            String secretYinSecretId = "Secret-YIN";
+            GetSecretValueResponse secretYinSecretValueResponse = retrieveSecret(secretsManagerClient, secretYinSecretId);
+            String secretYinSecretValue = secretYinSecretValueResponse.secretString();
+            Instant secretYinModifiedDate = secretYinSecretValueResponse.createdDate();
 
-        context.close();
+            // Retrieve secret "Secret-YANG"
+            String secretYangSecretId = "Secret-YANG";
+            GetSecretValueResponse secretYangSecretValueResponse = retrieveSecret(secretsManagerClient, secretYangSecretId);
+            String secretYangSecretValue = secretYangSecretValueResponse.secretString();
+            Instant secretYangModifiedDate = secretYangSecretValueResponse.createdDate();
+
+            // Compare modification dates
+            if (secretYinModifiedDate.isAfter(secretYangModifiedDate)) {
+                System.out.println("Secret-YIN is the most recent secret");
+            } else if (secretYangModifiedDate.isAfter(secretYinModifiedDate)) {
+                System.out.println("Secret-YANG is the most recent secret");
+            } else {
+                System.out.println("Both secrets have the same modification date");
+            }
+
+            System.out.println("Secret-YIN secret value: " + secretYinSecretValue);
+            System.out.println("Secret-YANG secret value: " + secretYangSecretValue);
+        } catch (SecretsManagerException e) {
+            System.err.println("Failed to retrieve secrets: " + e.awsErrorDetails().errorMessage());
+        } finally {
+            // Close the Secrets Manager client
+            secretsManagerClient.close();
+        }
+    }
+
+    private static GetSecretValueResponse retrieveSecret(SecretsManagerClient secretsManagerClient, String secretId) {
+        GetSecretValueRequest secretValueRequest = GetSecretValueRequest.builder()
+                .secretId(secretId)
+                .build();
+
+        return secretsManagerClient.getSecretValue(secretValueRequest);
     }
 }
-
-import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
-
-@FeignClient(name = "personClient", url = "${rest.base-url}")
-public interface PersonClient {
-    @GetMapping("/api/persons/{id}")
-    Person getPerson(@PathVariable("id") int id, @RequestHeader("Authorization") String authToken);
-}
-
-rest:
-  base-url: http://localhost:8080
-
-     Expression expression = parser.parseExpression("new java.text.SimpleDateFormat('dd-MM-yyyy').format(new java.text.SimpleDateFormat('yyyy-MM-dd').parse('" + inputDate + "'))");
-
