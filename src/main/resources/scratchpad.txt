@@ -1,80 +1,68 @@
-<dependencies>
-    <dependency>
-        <groupId>software.amazon.awssdk</groupId>
-        <artifactId>secretsmanager</artifactId>
-        <version>2.17.35</version>
-    </dependency>
-    <dependency>
-        <groupId>software.amazon.awssdk</groupId>
-        <artifactId>regions</artifactId>
-        <version>2.17.35</version>
-    </dependency>
-    <dependency>
-        <groupId>software.amazon.awssdk</groupId>
-        <artifactId>auth</artifactId>
-        <version>2.17.35</version>
-    </dependency>
-</dependencies>
-
-
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
-import software.amazon.awssdk.services.secretsmanager.model.SecretsManagerException;
+import software.amazon.awssdk.services.secretsmanager.model.*;
 
+import java.time.Duration;
 import java.time.Instant;
 
-public class SecretsManagerExample {
+public class SecretsMaintenanceExample {
+
+    private static final String ACCESS_KEY_ID = "YOUR_ACCESS_KEY_ID";
+    private static final String SECRET_ACCESS_KEY = "YOUR_SECRET_ACCESS_KEY";
+    private static final Region REGION = Region.US_EAST_1; // Replace with your desired region
+    private static final String SECRET_YIN_ID = "SECRET-YIN";
+    private static final String SECRET_YANG_ID = "SECRET-YANG";
+    private static final Duration REPLACEMENT_INTERVAL = Duration.ofMinutes(15);
 
     public static void main(String[] args) {
-        // Set up AWS credentials
-        String accessKeyId = "YOUR_ACCESS_KEY_ID";
-        String secretAccessKey = "YOUR_SECRET_ACCESS_KEY";
-        Region region = Region.US_EAST_1; // Replace with your desired region
-
-        // Set up Secrets Manager client
         SecretsManagerClient secretsManagerClient = SecretsManagerClient.builder()
-                .region(region)
+                .region(REGION)
                 .build();
 
-        try {
-            // Retrieve secret "Secret-YIN"
-            String secretYinSecretId = "Secret-YIN";
-            GetSecretValueResponse secretYinSecretValueResponse = retrieveSecret(secretsManagerClient, secretYinSecretId);
-            String secretYinSecretValue = secretYinSecretValueResponse.secretString();
-            Instant secretYinModifiedDate = secretYinSecretValueResponse.createdDate();
+        while (true) {
+            try {
+                Instant currentInstant = Instant.now();
 
-            // Retrieve secret "Secret-YANG"
-            String secretYangSecretId = "Secret-YANG";
-            GetSecretValueResponse secretYangSecretValueResponse = retrieveSecret(secretsManagerClient, secretYangSecretId);
-            String secretYangSecretValue = secretYangSecretValueResponse.secretString();
-            Instant secretYangModifiedDate = secretYangSecretValueResponse.createdDate();
+                // Generate new secret value
+                String newSecretValue = "NEW_SECRET_VALUE_" + currentInstant.toString();
 
-            // Compare modification dates
-            if (secretYinModifiedDate.isAfter(secretYangModifiedDate)) {
-                System.out.println("Secret-YIN is the most recent secret");
-            } else if (secretYangModifiedDate.isAfter(secretYinModifiedDate)) {
-                System.out.println("Secret-YANG is the most recent secret");
-            } else {
-                System.out.println("Both secrets have the same modification date");
+                // Determine the older secret and update it
+                String olderSecretId = getOlderSecretId(secretsManagerClient);
+                updateSecretValue(secretsManagerClient, olderSecretId, newSecretValue);
+
+                System.out.println("Replaced the secret with ID: " + olderSecretId);
+                System.out.println("New secret value: " + newSecretValue);
+
+                // Sleep for the replacement interval
+                Thread.sleep(REPLACEMENT_INTERVAL.toMillis());
+            } catch (SecretsManagerException | InterruptedException e) {
+                System.err.println("Failed to replace the secret: " + e.getMessage());
             }
-
-            System.out.println("Secret-YIN secret value: " + secretYinSecretValue);
-            System.out.println("Secret-YANG secret value: " + secretYangSecretValue);
-        } catch (SecretsManagerException e) {
-            System.err.println("Failed to retrieve secrets: " + e.awsErrorDetails().errorMessage());
-        } finally {
-            // Close the Secrets Manager client
-            secretsManagerClient.close();
         }
     }
 
-    private static GetSecretValueResponse retrieveSecret(SecretsManagerClient secretsManagerClient, String secretId) {
-        GetSecretValueRequest secretValueRequest = GetSecretValueRequest.builder()
-                .secretId(secretId)
+    private static String getOlderSecretId(SecretsManagerClient secretsManagerClient) {
+        GetSecretValueRequest secretYinValueRequest = GetSecretValueRequest.builder()
+                .secretId(SECRET_YIN_ID)
+                .build();
+        GetSecretValueRequest secretYangValueRequest = GetSecretValueRequest.builder()
+                .secretId(SECRET_YANG_ID)
                 .build();
 
-        return secretsManagerClient.getSecretValue(secretValueRequest);
+        Instant secretYinModifiedDate = secretsManagerClient.getSecretValue(secretYinValueRequest)
+                .createdDate();
+        Instant secretYangModifiedDate = secretsManagerClient.getSecretValue(secretYangValueRequest)
+                .createdDate();
+
+        return secretYinModifiedDate.isBefore(secretYangModifiedDate) ? SECRET_YIN_ID : SECRET_YANG_ID;
+    }
+
+    private static void updateSecretValue(SecretsManagerClient secretsManagerClient, String secretId, String newSecretValue) {
+        UpdateSecretRequest updateSecretRequest = UpdateSecretRequest.builder()
+                .secretId(secretId)
+                .secretString(newSecretValue)
+                .build();
+
+        secretsManagerClient.updateSecret(updateSecretRequest);
     }
 }
