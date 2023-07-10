@@ -1,68 +1,25 @@
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.model.*;
+$apiDefinitionPath = "C:\Path\to\API\Definition"  # Update with the path to your API definition directory
+$outputFilePath = "C:\Path\to\Output\File.raml"   # Update with the desired output file path
 
-import java.time.Duration;
-import java.time.Instant;
+function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[string]]$visitedFiles) {
+    $content = Get-Content -Path $filePath -Raw
 
-public class SecretsMaintenanceExample {
-
-    private static final String ACCESS_KEY_ID = "YOUR_ACCESS_KEY_ID";
-    private static final String SECRET_ACCESS_KEY = "YOUR_SECRET_ACCESS_KEY";
-    private static final Region REGION = Region.US_EAST_1; // Replace with your desired region
-    private static final String SECRET_YIN_ID = "SECRET-YIN";
-    private static final String SECRET_YANG_ID = "SECRET-YANG";
-    private static final Duration REPLACEMENT_INTERVAL = Duration.ofMinutes(15);
-
-    public static void main(String[] args) {
-        SecretsManagerClient secretsManagerClient = SecretsManagerClient.builder()
-                .region(REGION)
-                .build();
-
-        while (true) {
-            try {
-                Instant currentInstant = Instant.now();
-
-                // Generate new secret value
-                String newSecretValue = "NEW_SECRET_VALUE_" + currentInstant.toString();
-
-                // Determine the older secret and update it
-                String olderSecretId = getOlderSecretId(secretsManagerClient);
-                updateSecretValue(secretsManagerClient, olderSecretId, newSecretValue);
-
-                System.out.println("Replaced the secret with ID: " + olderSecretId);
-                System.out.println("New secret value: " + newSecretValue);
-
-                // Sleep for the replacement interval
-                Thread.sleep(REPLACEMENT_INTERVAL.toMillis());
-            } catch (SecretsManagerException | InterruptedException e) {
-                System.err.println("Failed to replace the secret: " + e.getMessage());
-            }
+    $matches = [regex]::Matches($content, '(?i)!include\s+[\'']([^\'']+)\'')
+    foreach ($match in $matches) {
+        $includePath = $match.Groups[1].Value
+        $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $includePath
+        if (-not $visitedFiles.Contains($fullIncludePath)) {
+            $visitedFiles.Add($fullIncludePath)
+            $includeContent = Resolve-RamlIncludes -filePath $fullIncludePath -visitedFiles $visitedFiles
+            $content = $content -replace [regex]::Escape($match.Value), $includeContent
         }
     }
 
-    private static String getOlderSecretId(SecretsManagerClient secretsManagerClient) {
-        GetSecretValueRequest secretYinValueRequest = GetSecretValueRequest.builder()
-                .secretId(SECRET_YIN_ID)
-                .build();
-        GetSecretValueRequest secretYangValueRequest = GetSecretValueRequest.builder()
-                .secretId(SECRET_YANG_ID)
-                .build();
-
-        Instant secretYinModifiedDate = secretsManagerClient.getSecretValue(secretYinValueRequest)
-                .createdDate();
-        Instant secretYangModifiedDate = secretsManagerClient.getSecretValue(secretYangValueRequest)
-                .createdDate();
-
-        return secretYinModifiedDate.isBefore(secretYangModifiedDate) ? SECRET_YIN_ID : SECRET_YANG_ID;
-    }
-
-    private static void updateSecretValue(SecretsManagerClient secretsManagerClient, String secretId, String newSecretValue) {
-        UpdateSecretRequest updateSecretRequest = UpdateSecretRequest.builder()
-                .secretId(secretId)
-                .secretString(newSecretValue)
-                .build();
-
-        secretsManagerClient.updateSecret(updateSecretRequest);
-    }
+    return $content
 }
+
+$visitedFiles = [System.Collections.Generic.HashSet[string]]::new()
+$outputContent = Resolve-RamlIncludes -filePath (Join-Path -Path $apiDefinitionPath -ChildPath "main.raml") -visitedFiles $visitedFiles
+$outputContent | Out-File -FilePath $outputFilePath -Encoding UTF8
+
+Write-Host "API definition files aggregated successfully into $outputFilePath."
