@@ -8,69 +8,70 @@ public class Main {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.out.println("Usage: java Main <file>");
+            System.out.println("Usage: java Main <file>"); // Print usage instructions if no file provided
             return;
         }
 
         String file = args[0];
-        String basePath = Paths.get(file).getParent().toString();
-        String result = doInclude(file, basePath);
+        String basePath = Paths.get(file).getParent().toString(); // Get the base path of the file
+        String result = doInclude(file, basePath); // Call the doInclude method to process the file
 
         System.out.println(result + "\n\n\n\n# -----------\n# Merged with ramlMerge.php\n# http://www.mikestowe.com\n\n");
+        // Print the result along with additional comments
     }
 
     private static String doInclude(String file, String basePath) {
         String contents;
         try {
-            contents = new String(Files.readAllBytes(Paths.get(file)));
+            contents = new String(Files.readAllBytes(Paths.get(file))); // Read the contents of the file
         } catch (IOException e) {
-            contents = null;
+            contents = null; // If an error occurs, set contents to null
         }
 
         if (contents == null) {
             try {
-                contents = new String(Files.readAllBytes(Paths.get(basePath, file)));
+                contents = new String(Files.readAllBytes(Paths.get(basePath, file))); // Read the contents of the file using the base path
             } catch (IOException e) {
-                contents = null;
+                contents = null; // If an error occurs, set contents to null
             }
         }
 
         if (contents == null) {
-            return "\n\n# Unable to Include " + file + "\n\n";
+            return "\n\n# Unable to Include " + file + "\n\n"; // Return error message if contents is still null
         }
 
-        String tabIndex = "";
-        String pattern = "(([\\s\\t]*)([a-z0-9_/\\-]+)):[\\s]+!include ([^\\s]+)";
-        Pattern regex = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-        Matcher matcher = regex.matcher(contents);
+        String tabIndex = ""; // Initialize tabIndex to an empty string
+        String pattern = "(([\\s\\t]*)([a-z0-9_/\\-]+)):[\\s]+!include ([^\\s]+)"; // Define the regular expression pattern
+        Pattern regex = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE); // Compile the regular expression pattern
+        Matcher matcher = regex.matcher(contents); // Create a Matcher object for matching against the contents
 
-        StringBuffer sb = new StringBuffer();
-        while (matcher.find()) {
-            String property = matcher.group(3);
-            String spacing = matcher.group(2);
-            String includedFile = matcher.group(4);
+        StringBuffer sb = new StringBuffer(); // Create a StringBuffer to store the modified contents
+        while (matcher.find()) { // Iterate through matches found in the contents
+            String property = matcher.group(3); // Get the matched property
+            String spacing = matcher.group(2); // Get the matched spacing
+            String includedFile = matcher.group(4); // Get the matched included file
 
             if (!includedFile.matches("^((https?://)|/)")) {
-                includedFile = Paths.get(basePath, includedFile).toString();
+                includedFile = Paths.get(basePath, includedFile).toString(); // If includedFile is not an absolute URL or path, append it to the base path
             }
 
-            String subContent = doInclude(includedFile, spacing + "    ");
-            String[] subLines = subContent.split("\\r?\\n");
+            String subContent = doInclude(includedFile, spacing + "    "); // Recursively call doInclude for the included file
+            String[] subLines = subContent.split("\\r?\\n"); // Split the subContent into lines
 
             int i = 0;
             String cap = ": | \n";
-            while (i < subLines.length && !subLines[i].matches("[^\\s]")) {
+            while (i < subLines.length && !subLines[i].matches("[^\\s]")) { // Find the first non-empty line in subLines
                 i++;
             }
 
             if (subLines[i].contains(":") && subLines[i].matches("(:\\s*('|\\\")(.+)('|\\\"))*")) {
-                cap = ":\n";
+                cap = ":\n"; // If the line contains ':' and matches the specific pattern, set cap to ":\n"
             }
 
-            matcher.appendReplacement(sb, Matcher.quoteReplacement(spacing + property + cap + subContent));
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(spacing + property + cap + subContent)); // Append the modified match to the StringBuffer
         }
-        matcher.appendTail(sb);
+        matcher.appendTail(sb); // Append the remaining contents after the last match
 
-        return sb.toString();
+        return sb.toString(); // Return the modified contents
     }
 }
