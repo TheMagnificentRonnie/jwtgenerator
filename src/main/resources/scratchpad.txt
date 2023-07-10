@@ -1,53 +1,76 @@
-function DoInclude {
-    param(
-        [string]$file,
-        [string]$tabIndex = ''
-    )
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-    $contents = Get-Content $file -ErrorAction SilentlyContinue
-    if (-not $contents) {
-        $contents = Get-Content (Join-Path $env:BASE_PATH $file) -ErrorAction SilentlyContinue
-    }
+public class Main {
 
-    if (-not $contents) {
-        return "`n`n# Unable to Include$file`n`n"
-    }
-
-    if ($tabIndex) {
-        $contents = $tabIndex + ($contents -replace '\n', "`n$tabIndex")
-    }
-
-    $contents = $contents -replace '(([\s\t]*)([a-z0-9_\/\-]+)):[\s]+\!include ([^\s]+)', {
-        param($matches)
-        $property = $matches.Groups[3].Value
-        $spacing = $matches.Groups[2].Value
-        $file = $matches.Groups[4].Value
-
-        if (-not ($file -match '^((https?:\/\/)|\/)')) {
-            $file = Join-Path $env:BASE_PATH $file
+    public static void main(String[] args) {
+        if (args.length == 0) {
+            System.out.println("Usage: java Main <file>");
+            return;
         }
 
-        $i = 0
-        $cap = ": | `n"
-        $subContent = DoInclude $file ("$spacing    ")
-        $subLines = $subContent -split '\n'
+        String file = args[0];
+        String basePath = Paths.get(file).getParent().toString();
+        String result = doInclude(file, basePath);
 
-        while ($i -lt $subLines.Length -and -not ($subLines[$i] -match '[^\s]')) {
-            $i++
+        System.out.println(result + "\n\n\n\n# -----------\n# Merged with ramlMerge.php\n# http://www.mikestowe.com\n\n");
+    }
+
+    private static String doInclude(String file, String basePath) {
+        String contents;
+        try {
+            contents = new String(Files.readAllBytes(Paths.get(file)));
+        } catch (IOException e) {
+            contents = null;
         }
 
-        if ($subLines[$i] -match '(:\s*(''|")(.+)('|"))*') {
-            $cap = ":`n"
+        if (contents == null) {
+            try {
+                contents = new String(Files.readAllBytes(Paths.get(basePath, file)));
+            } catch (IOException e) {
+                contents = null;
+            }
         }
 
-        return $spacing + $property + $cap + $subContent
-    })
+        if (contents == null) {
+            return "\n\n# Unable to Include " + file + "\n\n";
+        }
 
-    return $contents
+        String tabIndex = "";
+        String pattern = "(([\\s\\t]*)([a-z0-9_/\\-]+)):[\\s]+!include ([^\\s]+)";
+        Pattern regex = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = regex.matcher(contents);
+
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String property = matcher.group(3);
+            String spacing = matcher.group(2);
+            String includedFile = matcher.group(4);
+
+            if (!includedFile.matches("^((https?://)|/)")) {
+                includedFile = Paths.get(basePath, includedFile).toString();
+            }
+
+            String subContent = doInclude(includedFile, spacing + "    ");
+            String[] subLines = subContent.split("\\r?\\n");
+
+            int i = 0;
+            String cap = ": | \n";
+            while (i < subLines.length && !subLines[i].matches("[^\\s]")) {
+                i++;
+            }
+
+            if (subLines[i].contains(":") && subLines[i].matches("(:\\s*('|\\\")(.+)('|\\\"))*")) {
+                cap = ":\n";
+            }
+
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(spacing + property + cap + subContent));
+        }
+        matcher.appendTail(sb);
+
+        return sb.toString();
+    }
 }
-
-$file = $args[0]
-$env:BASE_PATH = Split-Path $file -Parent
-
-DoInclude $file
-Write-Host "`n`n`n`n# -----------`n# Merged with ramlMerge.php`n# http://www.mikestowe.com`n`n"
