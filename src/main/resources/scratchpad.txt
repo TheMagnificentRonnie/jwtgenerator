@@ -5,23 +5,29 @@ function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[str
     $content = Get-Content -Path $filePath -Raw
 
     $lines = $content -split '\r?\n'
-    $outputLines = @()
+    $matches = @()
 
     foreach ($line in $lines) {
-        if ($line.StartsWith('!include')) {
-            $includePath = $line.Substring(9).Trim()
-            $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $includePath
-            if (-not $visitedFiles.Contains($fullIncludePath)) {
-                $visitedFiles.Add($fullIncludePath)
-                $includeContent = Resolve-RamlIncludes -filePath $fullIncludePath -visitedFiles $visitedFiles
-                $outputLines += $includeContent
-            }
-        } else {
-            $outputLines += $line
+        $includeKeyword = "!include"
+        $includeIndex = $line.IndexOf($includeKeyword, [StringComparison]::InvariantCultureIgnoreCase)
+        if ($includeIndex -ge 0) {
+            $startIndex = $includeIndex + $includeKeyword.Length
+            $endIndex = $line.IndexOf('.raml', $startIndex, [StringComparison]::InvariantCultureIgnoreCase) + 5
+            $includePath = $line.Substring($startIndex, $endIndex - $startIndex).Trim()
+            $matches += $includePath
         }
     }
 
-    return $outputLines -join "`r`n"
+    foreach ($match in $matches) {
+        $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $match
+        if (-not $visitedFiles.Contains($fullIncludePath)) {
+            $visitedFiles.Add($fullIncludePath)
+            $includeContent = Resolve-RamlIncludes -filePath $fullIncludePath -visitedFiles $visitedFiles
+            $content = $content -replace [regex]::Escape('!include ' + $match), $includeContent
+        }
+    }
+
+    return $content
 }
 
 $visitedFiles = [System.Collections.Generic.HashSet[string]]::new()
