@@ -10,7 +10,7 @@ function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[str
     Write-Host "Found $includeCount includes in $($filePath)"
 
     foreach ($match in $matches) {
-        $includePath = $match.Groups[1].Value
+        $includePath = $match.Groups[1].Value.Replace('/', '\')  # Replace forward slashes with backslashes
         $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $includePath
         if (-not $visitedFiles.Contains($fullIncludePath)) {
             $visitedFiles.Add($fullIncludePath)
