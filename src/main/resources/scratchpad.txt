@@ -1,11 +1,23 @@
 $RamlFilePath = "C:\Path\to\your\raml-file.raml"
+$OutputFilePath = "C:\Path\to\Output\File.raml"
 
 $lines = Get-Content -Path $RamlFilePath
 
+$outputLines = @()
 foreach ($line in $lines) {
     if ($line -like '*!include*') {
         $startIndex = $line.IndexOf('!include')
-        $includePart = $line.Substring($startIndex)
-        Write-Host $includePart
+        $includePath = $line.Substring($startIndex + 9).Trim()
+
+        $includedContent = Get-Content -Path $includePath -Raw
+        $outputLines += $includedContent
+    }
+    else {
+        $outputLines += $line
     }
 }
+
+$outputContent = $outputLines -join "`r`n"
+$outputContent | Out-File -FilePath $OutputFilePath -Encoding UTF8
+
+Write-Host "Merged content saved to $OutputFilePath."
