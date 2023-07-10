@@ -3,13 +3,19 @@ $OutputFilePath = "C:\Path\to\Output\File.raml"
 
 function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[string]]$visitedFiles) {
     $content = Get-Content -Path $filePath -Raw
+$lines = $content -split '\r?\n'
+$matches = @()
 
-$matches = $content -split '\r?\n' | Where-Object { $_ -match '^\s*!include' }
+foreach ($line in $lines) {
+    $startIndex = $line.IndexOf('!include')
+    if ($startIndex -ge 0) {
+        $endIndex = $line.IndexOf('.raml', $startIndex) + 5
+        $includePath = $line.Substring($startIndex, $endIndex - $startIndex)
+        $matches += $includePath
+    }
+}
 
-
-    $includeCount = $matches.Count
-
-    Write-Host "Found $includeCount includes in $($filePath)"
+$matches
 
     foreach ($match in $matches) {
         $variable = $match.Groups['variable'].Value.Trim()
