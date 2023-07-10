@@ -5,6 +5,10 @@ function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[str
     $content = Get-Content -Path $filePath -Raw
 
     $matches = [regex]::Matches($content, '(?i)!include\s+[\'']([^\'']+)[\'']')
+    $includeCount = $matches.Count
+
+    Write-Host "Found $includeCount includes in $($filePath)"
+
     foreach ($match in $matches) {
         $includePath = $match.Groups[1].Value
         $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $includePath
