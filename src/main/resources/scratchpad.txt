@@ -1,5 +1,5 @@
-$apiDefinitionPath = "C:\Path\to\API\Definition"  # Update with the path to your API definition directory
-$outputFilePath = "C:\Path\to\Output\File.raml"   # Update with the desired output file path
+$ApiDefinitionPath = "C:\Path\to\API\Definition"
+$OutputFilePath = "C:\Path\to\Output\File.raml"
 
 function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[string]]$visitedFiles) {
     $content = Get-Content -Path $filePath -Raw
@@ -18,8 +18,9 @@ function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[str
     return $content
 }
 
-$visitedFiles = [System.Collections.Generic.HashSet[string]]::new()
-$outputContent = Resolve-RamlIncludes -filePath (Join-Path -Path $apiDefinitionPath -ChildPath "main.raml") -visitedFiles $visitedFiles
-$outputContent | Out-File -FilePath $outputFilePath -Encoding UTF8
 
-Write-Host "API definition files aggregated successfully into $outputFilePath."
+$visitedFiles = [System.Collections.Generic.HashSet[string]]::new()
+$outputContent = Resolve-RamlIncludes -filePath (Join-Path -Path $ApiDefinitionPath -ChildPath "main.raml") -visitedFiles $visitedFiles
+$outputContent | Out-File -FilePath $OutputFilePath -Encoding UTF8
+
+Write-Host "API definition files aggregated successfully into $OutputFilePath."
