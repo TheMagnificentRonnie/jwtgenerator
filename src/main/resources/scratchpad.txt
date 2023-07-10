@@ -4,7 +4,7 @@ $OutputFilePath = "C:\Path\to\Output\File.raml"
 function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[string]]$visitedFiles) {
     $content = Get-Content -Path $filePath -Raw
 
-$pattern = '(?i)(?<variable>.*?)\s*:\s*!include\s+["\'](?<includePath>[^"\']+)["\']'
+$pattern = '(?i)(?<variable>[^:\r\n]+)\s*:\s*!include\s+(?<includePath>[^\r\n]+)'
 $matches = [regex]::Matches($string, $pattern)
 
     $includeCount = $matches.Count
