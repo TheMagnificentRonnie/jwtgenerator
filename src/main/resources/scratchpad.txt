@@ -1,25 +1,53 @@
-<build>
-  <plugins>
-    <plugin>
-      <groupId>com.phoenixnap.oss</groupId>
-      <artifactId>springmvc-raml-plugin</artifactId>
-      <version>2.0.5</version>
-      <executions>
-        <execution>
-          <id>generate-server-stubs</id>
-          <phase>generate-sources</phase>
-          <goals>
-            <goal>generate</goal>
-          </goals>
-          <configuration>
-            <!-- Location of your RAML file -->
-            <ramlPath>${project.basedir}/src/main/resources/api.raml</ramlPath>
-            <!-- Output directory for generated code -->
-            <outputPath>${project.build.directory}/generated-sources</outputPath>
-            <!-- Additional configuration options, if required -->
-          </configuration>
-        </execution>
-      </executions>
-    </plugin>
-  </plugins>
-</build>
+function DoInclude {
+    param(
+        [string]$file,
+        [string]$tabIndex = ''
+    )
+
+    $contents = Get-Content $file -ErrorAction SilentlyContinue
+    if (-not $contents) {
+        $contents = Get-Content (Join-Path $env:BASE_PATH $file) -ErrorAction SilentlyContinue
+    }
+
+    if (-not $contents) {
+        return "`n`n# Unable to Include$file`n`n"
+    }
+
+    if ($tabIndex) {
+        $contents = $tabIndex + ($contents -replace '\n', "`n$tabIndex")
+    }
+
+    $contents = $contents -replace '(([\s\t]*)([a-z0-9_\/\-]+)):[\s]+\!include ([^\s]+)', {
+        param($matches)
+        $property = $matches.Groups[3].Value
+        $spacing = $matches.Groups[2].Value
+        $file = $matches.Groups[4].Value
+
+        if (-not ($file -match '^((https?:\/\/)|\/)')) {
+            $file = Join-Path $env:BASE_PATH $file
+        }
+
+        $i = 0
+        $cap = ": | `n"
+        $subContent = DoInclude $file ("$spacing    ")
+        $subLines = $subContent -split '\n'
+
+        while ($i -lt $subLines.Length -and -not ($subLines[$i] -match '[^\s]')) {
+            $i++
+        }
+
+        if ($subLines[$i] -match '(:\s*(''|")(.+)('|"))*') {
+            $cap = ":`n"
+        }
+
+        return $spacing + $property + $cap + $subContent
+    })
+
+    return $contents
+}
+
+$file = $args[0]
+$env:BASE_PATH = Split-Path $file -Parent
+
+DoInclude $file
+Write-Host "`n`n`n`n# -----------`n# Merged with ramlMerge.php`n# http://www.mikestowe.com`n`n"
