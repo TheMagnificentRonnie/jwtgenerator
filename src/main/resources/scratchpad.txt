@@ -3,33 +3,25 @@ $OutputFilePath = "C:\Path\to\Output\File.raml"
 
 function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[string]]$visitedFiles) {
     $content = Get-Content -Path $filePath -Raw
-$lines = $content -split '\r?\n'
-$matches = @()
 
-foreach ($line in $lines) {
-    $startIndex = $line.IndexOf('!include')
-    if ($startIndex -ge 0) {
-        $endIndex = $line.IndexOf('.raml', $startIndex) + 5
-        $includePath = $line.Substring($startIndex, $endIndex - $startIndex)
-        $matches += $includePath
-    }
-}
+    $lines = $content -split '\r?\n'
+    $outputLines = @()
 
-$matches
-
-    foreach ($match in $matches) {
-        $variable = $match.Groups['variable'].Value.Trim()
-        $includePath = $match.Groups['includePath'].Value
-        $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $includePath.Replace('/', '\')
-        if (-not $visitedFiles.Contains($fullIncludePath)) {
-            $visitedFiles.Add($fullIncludePath)
-            $includeContent = Resolve-RamlIncludes -filePath $fullIncludePath -visitedFiles $visitedFiles
-            Write-Host "Merging include: $variable -> $includePath"
-            $content = $content -replace [regex]::Escape($match.Value), "`$variable: `r`n$includeContent"
+    foreach ($line in $lines) {
+        if ($line.StartsWith('!include')) {
+            $includePath = $line.Substring(9).Trim()
+            $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $includePath
+            if (-not $visitedFiles.Contains($fullIncludePath)) {
+                $visitedFiles.Add($fullIncludePath)
+                $includeContent = Resolve-RamlIncludes -filePath $fullIncludePath -visitedFiles $visitedFiles
+                $outputLines += $includeContent
+            }
+        } else {
+            $outputLines += $line
         }
     }
 
-    return $content
+    return $outputLines -join "`r`n"
 }
 
 $visitedFiles = [System.Collections.Generic.HashSet[string]]::new()
