@@ -17,7 +17,7 @@ function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[str
             $visitedFiles.Add($fullIncludePath)
             $includeContent = Resolve-RamlIncludes -filePath $fullIncludePath -visitedFiles $visitedFiles
             Write-Host "Merging include: $variable -> $includePath"
-            $content = $content -replace [regex]::Escape($match.Value), "$variable: `r`n$includeContent"
+            $content = $content -replace [regex]::Escape($match.Value), "`$variable: `r`n$includeContent"
         }
     }
 
