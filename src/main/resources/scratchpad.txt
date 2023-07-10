@@ -1,37 +1,9 @@
-$ApiDefinitionPath = "C:\Path\to\API\Definition"
-$OutputFilePath = "C:\Path\to\Output\File.raml"
+$RamlFilePath = "C:\Path\to\your\raml-file.raml"
 
-function Resolve-RamlIncludes($filePath, [System.Collections.Generic.HashSet[string]]$visitedFiles) {
-    $content = Get-Content -Path $filePath -Raw
+$lines = Get-Content -Path $RamlFilePath
 
-    $lines = $content -split '\r?\n'
-    $matches = @()
-
-    foreach ($line in $lines) {
-        $includeKeyword = "!include"
-        $includeIndex = $line.IndexOf($includeKeyword, [StringComparison]::InvariantCultureIgnoreCase)
-        if ($includeIndex -ge 0) {
-            $startIndex = $includeIndex + $includeKeyword.Length
-            $endIndex = $line.IndexOf('.raml', $startIndex, [StringComparison]::InvariantCultureIgnoreCase) + 5
-            $includePath = $line.Substring($startIndex, $endIndex - $startIndex).Trim()
-            $matches += $includePath
-        }
+foreach ($line in $lines) {
+    if ($line -like '*!include*') {
+        Write-Host $line
     }
-
-    foreach ($match in $matches) {
-        $fullIncludePath = Join-Path -Path (Split-Path -Path $filePath) -ChildPath $match
-        if (-not $visitedFiles.Contains($fullIncludePath)) {
-            $visitedFiles.Add($fullIncludePath)
-            $includeContent = Resolve-RamlIncludes -filePath $fullIncludePath -visitedFiles $visitedFiles
-            $content = $content -replace [regex]::Escape('!include ' + $match), $includeContent
-        }
-    }
-
-    return $content
 }
-
-$visitedFiles = [System.Collections.Generic.HashSet[string]]::new()
-$outputContent = Resolve-RamlIncludes -filePath (Join-Path -Path $ApiDefinitionPath -ChildPath "main.raml") -visitedFiles $visitedFiles
-$outputContent | Out-File -FilePath $OutputFilePath -Encoding UTF8
-
-Write-Host "API definition files aggregated successfully into $OutputFilePath."
