@@ -1,61 +1,34 @@
-public class Example {
-    public static void main(String[] args) {
-        WebClient client = WebClient.create("https://example.com");
-        client.get()
-            .uri("/resource?param1=value1&param2=value2")
-            .header("header1", "value1")
-            .header("header2", "value2")
-            .retrieve()
-            .bodyToMono(String.class)
-            .subscribe(System.out::println);
+<dependency>
+    <groupId>com.github.fge</groupId>
+    <artifactId>json-schema-validator</artifactId>
+    <version>2.2.15</version> <!-- Check for the latest version -->
+</dependency>
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.jackson.JsonLoader;
+import com.github.fge.jsonschema.core.report.ProcessingReport;
+import com.github.fge.jsonschema.main.JsonSchema;
+import com.github.fge.jsonschema.main.JsonSchemaFactory;
+
+import java.io.IOException;
+
+public class JSONSchemaGenerator {
+    public static void main(String[] args) throws IOException {
+        // JSON string
+        String jsonString = "{ \"name\": \"John\", \"age\": 30, \"city\": \"New York\" }";
+
+        // Load JSON string as a JsonNode
+        JsonNode jsonNode = JsonLoader.fromString(jsonString);
+
+        // Create JSON Schema factory
+        JsonSchemaFactory factory = JsonSchemaFactory.byDefault();
+
+        // Generate JSON Schema
+        JsonSchema jsonSchema = factory.getJsonSchema(jsonNode);
+
+        // Print the generated JSON Schema
+        System.out.println(jsonSchema);
     }
 }
 
-
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.QueryRequest;
-import com.amazonaws.services.dynamodbv2.model.QueryResult;
-
-import java.util.HashMap;
-import java.util.Map;
-
-public class DynamoDBQueryExample {
-    public static void main(String[] args) {
-        // Replace these with your own settings
-        String tableName = "YourTableName";
-        String partitionKeyName = "YourPartitionKeyName";
-        String partitionKey = "YourPartitionKeyValue";
-
-        // Create an AmazonDynamoDB instance
-        AmazonDynamoDB dynamoDBClient = AmazonDynamoDBClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                        "your-dynamodb-endpoint", "your-dynamodb-region"))
-                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance())
-                .build();
-
-        // Create a query request
-        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
-        expressionAttributeValues.put(":pkValue", new AttributeValue().withS(partitionKey));
-
-        QueryRequest queryRequest = new QueryRequest()
-                .withTableName(tableName)
-                .withKeyConditionExpression(partitionKeyName + " = :pkValue")
-                .withExpressionAttributeValues(expressionAttributeValues);
-
-        // Perform the query
-        QueryResult queryResult = dynamoDBClient.query(queryRequest);
-
-        // Process the results
-        queryResult.getItems().forEach(item -> {
-            // Process each item's attributes
-            item.forEach((key, value) -> {
-                System.out.println(key + ": " + value.toString());
-            });
-            System.out.println("--------");
-        });
-    }
-}
