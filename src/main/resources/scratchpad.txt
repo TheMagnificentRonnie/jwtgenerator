@@ -10,3 +10,52 @@ public class Example {
             .subscribe(System.out::println);
     }
 }
+
+
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.QueryRequest;
+import com.amazonaws.services.dynamodbv2.model.QueryResult;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class DynamoDBQueryExample {
+    public static void main(String[] args) {
+        // Replace these with your own settings
+        String tableName = "YourTableName";
+        String partitionKeyName = "YourPartitionKeyName";
+        String partitionKey = "YourPartitionKeyValue";
+
+        // Create an AmazonDynamoDB instance
+        AmazonDynamoDB dynamoDBClient = AmazonDynamoDBClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                        "your-dynamodb-endpoint", "your-dynamodb-region"))
+                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance())
+                .build();
+
+        // Create a query request
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":pkValue", new AttributeValue().withS(partitionKey));
+
+        QueryRequest queryRequest = new QueryRequest()
+                .withTableName(tableName)
+                .withKeyConditionExpression(partitionKeyName + " = :pkValue")
+                .withExpressionAttributeValues(expressionAttributeValues);
+
+        // Perform the query
+        QueryResult queryResult = dynamoDBClient.query(queryRequest);
+
+        // Process the results
+        queryResult.getItems().forEach(item -> {
+            // Process each item's attributes
+            item.forEach((key, value) -> {
+                System.out.println(key + ": " + value.toString());
+            });
+            System.out.println("--------");
+        });
+    }
+}
