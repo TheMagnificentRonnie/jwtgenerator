@@ -26,3 +26,28 @@ foreach ($file in $files) {
         Write-Host "Skipped $($file.FullName) (already exists at $($destinationPath))"
     }
 }
+
+
+@echo off
+set "sourceFolder=C:\projects"
+set "destinationFolder=F:\projects"
+
+if not exist "%destinationFolder%" (
+    mkdir "%destinationFolder%"
+)
+
+for /r "%sourceFolder%" %%F in (*) do (
+    set "relativePath=%%~dpF"
+    setlocal enabledelayedexpansion
+    set "relativePath=!relativePath:%sourceFolder%=!"
+    if not exist "%destinationFolder%!relativePath!" (
+        mkdir "%destinationFolder%!relativePath!"
+    )
+    if not exist "%destinationFolder%!relativePath!%%~nxF" (
+        copy "%%F" "%destinationFolder%!relativePath!%%~nxF"
+        echo Copied "%%F" to "%destinationFolder%!relativePath!%%~nxF"
+    ) else (
+        echo Skipped "%%F" (already exists at "%destinationFolder%!relativePath!%%~nxF")
+    )
+    endlocal
+)
