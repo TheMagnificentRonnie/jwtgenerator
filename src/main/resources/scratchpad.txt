@@ -1,53 +1,26 @@
-$sourceFolder = "C:\projects"
-$destinationFolder = "F:\projects"
-
-# Create the destination folder if it doesn't exist
-if (-not (Test-Path -Path $destinationFolder)) {
-    New-Item -ItemType Directory -Path $destinationFolder | Out-Null
-}
-
-# Get all files from the source folder and its subfolders
-$files = Get-ChildItem -Path $sourceFolder -File -Recurse
-
-foreach ($file in $files) {
-    $relativePath = $file.FullName.Substring($sourceFolder.Length + 1)
-    $destinationPath = Join-Path -Path $destinationFolder -ChildPath $relativePath
-
-    $destinationFolderForFile = Split-Path -Path $destinationPath
-    if (-not (Test-Path -Path $destinationFolderForFile)) {
-        New-Item -ItemType Directory -Path $destinationFolderForFile | Out-Null
-    }
-
-    # Check if the file already exists in the destination folder
-    if (-not (Test-Path -Path $destinationPath)) {
-        Copy-Item -Path $file.FullName -Destination $destinationPath
-        Write-Host "Copied $($file.FullName) to $($destinationPath)"
-    } else {
-        Write-Host "Skipped $($file.FullName) (already exists at $($destinationPath))"
-    }
-}
-
-
-@echo off
-set "sourceFolder=C:\projects"
-set "destinationFolder=F:\projects"
-
-if not exist "%destinationFolder%" (
-    mkdir "%destinationFolder%"
-)
-
-for /r "%sourceFolder%" %%F in (*) do (
-    set "relativePath=%%~dpF"
-    setlocal enabledelayedexpansion
-    set "relativePath=!relativePath:%sourceFolder%=!"
-    if not exist "%destinationFolder%!relativePath!" (
-        mkdir "%destinationFolder%!relativePath!"
-    )
-    if not exist "%destinationFolder%!relativePath!%%~nxF" (
-        copy "%%F" "%destinationFolder%!relativePath!%%~nxF"
-        echo Copied "%%F" to "%destinationFolder%!relativePath!%%~nxF"
-    ) else (
-        echo Skipped "%%F" (already exists at "%destinationFolder%!relativePath!%%~nxF")
-    )
-    endlocal
-)
+<build>
+    <plugins>
+        <plugin>
+            <groupId>io.swagger.codegen.v3</groupId>
+            <artifactId>swagger-codegen-maven-plugin</artifactId>
+            <version>3.0.30</version> <!-- Use the latest version -->
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>generate</goal>
+                    </goals>
+                    <configuration>
+                        <inputSpec>src/main/resources/openapi.yaml</inputSpec> <!-- Path to your OpenAPI spec (optional) -->
+                        <generatorName>io.micronaut.openapi.generator.MicronautGenerator</generatorName>
+                        <configOptions>
+                            <artifactId>${project.artifactId}</artifactId>
+                            <groupId>${project.groupId}</groupId>
+                            <apiPackage>com.example.myapi.controllers</apiPackage> <!-- Package to scan for API controllers -->
+                            <output>${project.build.directory}/swagger</output> <!-- Output directory for generated OpenAPI files -->
+                        </configOptions>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
