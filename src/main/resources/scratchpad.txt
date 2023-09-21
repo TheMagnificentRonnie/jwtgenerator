@@ -1,26 +1,46 @@
-<build>
-    <plugins>
-        <plugin>
-            <groupId>io.swagger.codegen.v3</groupId>
-            <artifactId>swagger-codegen-maven-plugin</artifactId>
-            <version>3.0.30</version> <!-- Use the latest version -->
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>generate</goal>
-                    </goals>
-                    <configuration>
-                        <inputSpec>src/main/resources/openapi.yaml</inputSpec> <!-- Path to your OpenAPI spec (optional) -->
-                        <generatorName>io.micronaut.openapi.generator.MicronautGenerator</generatorName>
-                        <configOptions>
-                            <artifactId>${project.artifactId}</artifactId>
-                            <groupId>${project.groupId}</groupId>
-                            <apiPackage>com.example.myapi.controllers</apiPackage> <!-- Package to scan for API controllers -->
-                            <output>${project.build.directory}/swagger</output> <!-- Output directory for generated OpenAPI files -->
-                        </configOptions>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
+    private ObjectMapper objectMapper;
+    private FilterJsonArrayByField filterJsonArrayByField;
+
+    @BeforeEach
+    public void setUp() {
+        objectMapper = new ObjectMapper();
+        filterJsonArrayByField = new FilterJsonArrayByField();
+    }
+
+    @Test
+    public void testFilterJsonArrayByField() throws Exception {
+        String jsonArrayStr = "[{\"name\": \"John\", \"age\": 30}, {\"name\": \"Alice\", \"age\": 25}, {\"name\": \"Bob\", \"age\": 30}]";
+
+        // Convert the JSON array string to a JsonNode array
+        JsonNode jsonArray = objectMapper.readTree(jsonArrayStr);
+
+        // Define the filter field and value
+        String filterField = "age";
+        String filterValue = "30";
+
+        // Call the filterJsonArrayByField method
+        List<JsonNode> filteredList = filterJsonArrayByField.filterJsonArrayByField(jsonArray, filterField, filterValue);
+
+        // Check the size of the filtered list
+        assertEquals(2, filteredList.size());
+
+        // Check the contents of the filtered list
+        assertEquals("John", filteredList.get(0).get("name").asText());
+        assertEquals("Bob", filteredList.get(1).get("name").asText());
+    }
+
+
+    List<Object> filteredList = JsonPath.read(jsonArray, "$[?(@.address.state == 'NY')]");
+
+    ObjectMapper mapper = new ObjectMapper();
+
+
+    try {
+      ArrayNode jarray  = mapper.readValue(jsonArray, ArrayNode.class);
+  ArrayNode jarray2 = mapper.readValue(mapper.writeValueAsString(filteredList), ArrayNode.class);
+      System.out.println("hello");
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
