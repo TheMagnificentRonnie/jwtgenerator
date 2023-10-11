@@ -1,46 +1,18 @@
-    private ObjectMapper objectMapper;
-    private FilterJsonArrayByField filterJsonArrayByField;
+ SSLContext sslContext = SSLContext.getInstance("TLS");
+                    X509TrustManager trustAllCertificates = new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
 
-    @BeforeEach
-    public void setUp() {
-        objectMapper = new ObjectMapper();
-        filterJsonArrayByField = new FilterJsonArrayByField();
-    }
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                        }
 
-    @Test
-    public void testFilterJsonArrayByField() throws Exception {
-        String jsonArrayStr = "[{\"name\": \"John\", \"age\": 30}, {\"name\": \"Alice\", \"age\": 25}, {\"name\": \"Bob\", \"age\": 30}]";
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                        }
+                    };
+                    sslContext.init(null, new TrustManager[]{trustAllCertificates}, null);
 
-        // Convert the JSON array string to a JsonNode array
-        JsonNode jsonArray = objectMapper.readTree(jsonArrayStr);
-
-        // Define the filter field and value
-        String filterField = "age";
-        String filterValue = "30";
-
-        // Call the filterJsonArrayByField method
-        List<JsonNode> filteredList = filterJsonArrayByField.filterJsonArrayByField(jsonArray, filterField, filterValue);
-
-        // Check the size of the filtered list
-        assertEquals(2, filteredList.size());
-
-        // Check the contents of the filtered list
-        assertEquals("John", filteredList.get(0).get("name").asText());
-        assertEquals("Bob", filteredList.get(1).get("name").asText());
-    }
-
-
-    List<Object> filteredList = JsonPath.read(jsonArray, "$[?(@.address.state == 'NY')]");
-
-    ObjectMapper mapper = new ObjectMapper();
-
-
-    try {
-      ArrayNode jarray  = mapper.readValue(jsonArray, ArrayNode.class);
-  ArrayNode jarray2 = mapper.readValue(mapper.writeValueAsString(filteredList), ArrayNode.class);
-      System.out.println("hello");
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+                    // Set the custom SSLContext for the HttpClient
+                    HttpClient client = HttpClient.newBuilder()
+                            .sslContext(sslContext)
+                            .build();
