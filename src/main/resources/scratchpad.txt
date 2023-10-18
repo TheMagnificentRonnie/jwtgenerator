@@ -1,18 +1,49 @@
- SSLContext sslContext = SSLContext.getInstance("TLS");
-                    X509TrustManager trustAllCertificates = new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return null;
-                        }
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.concurrent.CompletableFuture;
 
-                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                        }
+public class HttpClientExample {
+    public static void main(String[] args) {
+        // Define the service URL, authorization header, and client ID
+        String baseUrl = "https://example.com/api/resource/";
+        String clientId = "yourClientId";
+        String authToken = "Bearer yourAccessToken";
 
-                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                        }
-                    };
-                    sslContext.init(null, new TrustManager[]{trustAllCertificates}, null);
+        // Create an HttpClient
+        HttpClient httpClient = HttpClient.newHttpClient();
 
-                    // Set the custom SSLContext for the HttpClient
-                    HttpClient client = HttpClient.newBuilder()
-                            .sslContext(sslContext)
-                            .build();
+        // Build the URI with the client ID as a path parameter
+        String requestUrl = baseUrl + clientId;
+        URI uri = URI.create(requestUrl);
+
+        // Build the HTTP request with the Authorization header
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri)
+                .header("Authorization", authToken)
+                .GET()
+                .build();
+
+        // Send the HTTP request asynchronously and map the response to MyResponseClass
+        CompletableFuture<HttpResponse<MyResponseClass>> responseFuture = httpClient.sendAsync(
+                request,
+                HttpResponse.BodyHandlers.ofMapping(
+                        HttpResponse.BodyHandlers.ofString(),
+                        MyResponseClass.fromJson() // Replace with your own deserialization logic
+                )
+        );
+
+        // Handle the response
+        responseFuture.thenAccept(response -> {
+            int statusCode = response.statusCode();
+
+            if (statusCode == 200) {
+                MyResponseClass responseObject = response.body();
+                System.out.println("Deserialized Object: " + responseObject);
+            } else {
+                System.err.println("Request failed with status code: " + statusCode);
+            }
+        }).join(); // Wait for the response to complete
+    }
+}
