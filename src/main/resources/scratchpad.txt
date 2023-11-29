@@ -1,49 +1,82 @@
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.concurrent.CompletableFuture;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-public class HttpClientExample {
-    public static void main(String[] args) {
-        // Define the service URL, authorization header, and client ID
-        String baseUrl = "https://example.com/api/resource/";
-        String clientId = "yourClientId";
-        String authToken = "Bearer yourAccessToken";
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
 
-        // Create an HttpClient
-        HttpClient httpClient = HttpClient.newHttpClient();
+public class WireMockSampleTest {
 
-        // Build the URI with the client ID as a path parameter
-        String requestUrl = baseUrl + clientId;
-        URI uri = URI.create(requestUrl);
+    private static WireMockServer wireMockServer;
 
-        // Build the HTTP request with the Authorization header
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(uri)
-                .header("Authorization", authToken)
-                .GET()
-                .build();
+    @BeforeClass
+    public static void setup() {
+        wireMockServer = new WireMockServer();
+        wireMockServer.start();
 
-        // Send the HTTP request asynchronously and map the response to MyResponseClass
-        CompletableFuture<HttpResponse<MyResponseClass>> responseFuture = httpClient.sendAsync(
-                request,
-                HttpResponse.BodyHandlers.ofMapping(
-                        HttpResponse.BodyHandlers.ofString(),
-                        MyResponseClass.fromJson() // Replace with your own deserialization logic
-                )
-        );
+        WireMock.configureFor("localhost", wireMockServer.port());
 
-        // Handle the response
-        responseFuture.thenAccept(response -> {
-            int statusCode = response.statusCode();
+        WireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/person/([0-9]+)"))
+                .withHeader("Authorization", WireMock.matching("Bearer .*"))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\n" +
+                                "  \"person\": {\n" +
+                                "    \"id\": ${request.path.[1]},\n" +
+                                "    \"name\": \"John Doe\",\n" +
+                                "    \"age\": 30,\n" +
+                                "    \"address\": {\n" +
+                                "      \"street\": \"123 Main Street\",\n" +
+                                "      \"city\": \"Anytown\",\n" +
+                                "      \"state\": \"CA\",\n" +
+                                "      \"zip\": \"12345\"\n" +
+                                "    }\n" +
+                                "  },\n" +
+                                "  \"bankAccounts\": [\n" +
+                                "    {\n" +
+                                "      \"accountNumber\": \"987654321\",\n" +
+                                "      \"bankName\": \"XYZ Bank\",\n" +
+                                "      \"balance\": 5000.00,\n" +
+                                "      \"currency\": \"USD\"\n" +
+                                "    },\n" +
+                                "    {\n" +
+                                "      \"accountNumber\": \"123456789\",\n" +
+                                "      \"bankName\": \"ABC Bank\",\n" +
+                                "      \"balance\": 2500.50,\n" +
+                                "      \"currency\": \"USD\"\n" +
+                                "    }\n" +
+                                "  ]\n" +
+                                "}")));
+    }
 
-            if (statusCode == 200) {
-                MyResponseClass responseObject = response.body();
-                System.out.println("Deserialized Object: " + responseObject);
-            } else {
-                System.err.println("Request failed with status code: " + statusCode);
-            }
-        }).join(); // Wait for the response to complete
+    @AfterClass
+    public static void tearDown() {
+        wireMockServer.stop();
+    }
+
+    @Test
+    public void testGetPersonWithValidAuthorization() {
+        given()
+            .header("Authorization", "Bearer validToken")
+        .when()
+            .get("http://localhost:" + wireMockServer.port() + "/person/123")
+        .then()
+            .statusCode(200)
+            .body("person.id", equalTo(123))
+            .body("person.name", equalTo("John Doe"))
+            .body("bankAccounts.size()", equalTo(2));
+    }
+
+    @Test
+    public void testGetPersonWithInvalidAuthorization() {
+        given()
+            .header("Authorization", "Bearer invalidToken")
+        .when()
+            .get("http://localhost:" + wireMockServer.port() + "/person/456")
+        .then()
+            .statusCode(401); // Assuming unauthorized status code is 401
     }
 }
