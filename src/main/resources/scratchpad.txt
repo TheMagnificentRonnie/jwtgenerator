@@ -1,82 +1,35 @@
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import java.util.Date;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
+public class JwtTokenGenerator {
 
-public class WireMockSampleTest {
+    public static void main(String[] args) {
+        String inDateToken = createToken(24); // Token valid for 24 hours
+        String outOfDateToken = createToken(-24); // Token expired 24 hours ago
 
-    private static WireMockServer wireMockServer;
-
-    @BeforeClass
-    public static void setup() {
-        wireMockServer = new WireMockServer();
-        wireMockServer.start();
-
-        WireMock.configureFor("localhost", wireMockServer.port());
-
-        WireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/person/([0-9]+)"))
-                .withHeader("Authorization", WireMock.matching("Bearer .*"))
-                .willReturn(WireMock.aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("{\n" +
-                                "  \"person\": {\n" +
-                                "    \"id\": ${request.path.[1]},\n" +
-                                "    \"name\": \"John Doe\",\n" +
-                                "    \"age\": 30,\n" +
-                                "    \"address\": {\n" +
-                                "      \"street\": \"123 Main Street\",\n" +
-                                "      \"city\": \"Anytown\",\n" +
-                                "      \"state\": \"CA\",\n" +
-                                "      \"zip\": \"12345\"\n" +
-                                "    }\n" +
-                                "  },\n" +
-                                "  \"bankAccounts\": [\n" +
-                                "    {\n" +
-                                "      \"accountNumber\": \"987654321\",\n" +
-                                "      \"bankName\": \"XYZ Bank\",\n" +
-                                "      \"balance\": 5000.00,\n" +
-                                "      \"currency\": \"USD\"\n" +
-                                "    },\n" +
-                                "    {\n" +
-                                "      \"accountNumber\": \"123456789\",\n" +
-                                "      \"bankName\": \"ABC Bank\",\n" +
-                                "      \"balance\": 2500.50,\n" +
-                                "      \"currency\": \"USD\"\n" +
-                                "    }\n" +
-                                "  ]\n" +
-                                "}")));
+        System.out.println("In-Date Token: " + inDateToken);
+        System.out.println("Out-of-Date Token: " + outOfDateToken);
     }
 
-    @AfterClass
-    public static void tearDown() {
-        wireMockServer.stop();
-    }
+    private static String createToken(int hours) {
+        Algorithm algorithm = Algorithm.HMAC256("secret"); // Use a secure, unique secret key
 
-    @Test
-    public void testGetPersonWithValidAuthorization() {
-        given()
-            .header("Authorization", "Bearer validToken")
-        .when()
-            .get("http://localhost:" + wireMockServer.port() + "/person/123")
-        .then()
-            .statusCode(200)
-            .body("person.id", equalTo(123))
-            .body("person.name", equalTo("John Doe"))
-            .body("bankAccounts.size()", equalTo(2));
-    }
+        long nowMillis = System.currentTimeMillis();
+        Date now = new Date(nowMillis);
+        Date expiryDate = new Date(nowMillis + hours * 60 * 60 * 1000);
 
-    @Test
-    public void testGetPersonWithInvalidAuthorization() {
-        given()
-            .header("Authorization", "Bearer invalidToken")
-        .when()
-            .get("http://localhost:" + wireMockServer.port() + "/person/456")
-        .then()
-            .statusCode(401); // Assuming unauthorized status code is 401
+        return JWT.create()
+                .withIssuer("issuer")
+                .withIssuedAt(now)
+                .withExpiresAt(expiryDate)
+                .sign(algorithm);
     }
 }
+
+<dependency>
+    <groupId>com.auth0</groupId>
+    <artifactId>java-jwt</artifactId>
+    <version>3.18.2</version>
+</dependency>
+
